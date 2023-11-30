@@ -1,7 +1,8 @@
 import streamlit as st
 from utils import (
     create_default_label, 
-    get_labelset_names)
+    get_labelset_names,
+    save_labelset)
 from io import StringIO
 
 
@@ -24,12 +25,8 @@ def create_side_bar(db):
                 content = StringIO(uploaded_file.getvalue().decode("utf-8")).read()
                 label_set_name = st.text_input("Label Set Name", key="label_set_name", value=uploaded_file.name.split(".")[0])
                 if st.button("Upload", key="label_set_upload_button", use_container_width=True):
-                    with open(f"./labelsets/{label_set_name}.txt", "w") as f:
-                        f.write(content)
-                    label_set = label_set_name
+                    save_labelset(label_set_name, content)
                     st.success(f"Uploaded label set `{label_set_name}`")
-                # st.write(stringio.read())
-        
         
         # how many similar documents to retrieve
         st.markdown("**Query Settings:·**")
@@ -55,4 +52,4 @@ def create_side_bar(db):
             db.delete_by_key(del_key)
             st.success(f"Deleted metadata `{del_key}`")
              
-    return n_results, label_set
+    return n_results, label_set_name

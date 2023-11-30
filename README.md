@@ -12,3 +12,5 @@ copy `chroma_storage` folder to this project
 ```bash
 streamlit run main.py
 ```
+
+![interface](images/page.png)

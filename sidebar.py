@@ -14,7 +14,7 @@ def create_side_bar(db):
         
         # select label set to annotate data  
         st.markdown("**Select Label Set**")
-        label_set = st.selectbox("Label Set", get_labelset_names())
+        label_set = st.selectbox("Label Set", get_labelset_names(), key = "use_label_set")
         
         st.markdown("**Create Label Set**")
         col1, col2 = st.columns(2)
@@ -52,4 +52,4 @@ def create_side_bar(db):
             db.delete_by_key(del_key)
             st.success(f"Deleted metadata `{del_key}`")
              
-    return n_results, label_set_name
+    return n_results, label_set

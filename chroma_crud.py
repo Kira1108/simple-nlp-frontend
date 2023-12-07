@@ -1,7 +1,7 @@
 import random
 from chromadb import Collection
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import pandas as pd
 import datetime
 import uuid
@@ -15,17 +15,24 @@ def delete_metadata_by_key(key_name:str):
         cursor.execute(f"delete from embedding_metadata where key ='{key_name}';")
         conn.commit()
 
+
 @dataclass
 class Document:
-    """A document has a id, embeding, metadata and document text."""
+    """A document with an ID, embedding, metadata, and document text."""
     
     id: str
     embedding: List[float] = None
-    metadata: dict = None
-    document:str = None
+    metadata: Dict[str, str] = None
+    document: str = None
     
 @dataclass
 class QueryResult(Document):
+    """
+    Represents the result of a query.
+
+    Attributes:
+        distance (float): The distance of the query result.
+    """
     distance: float = None
 
 @dataclass
@@ -45,27 +52,58 @@ class ChromaCrud:
         
         return self._ids
 
-    def random_doc(self, where:dict = None) -> str:
-        
-        """Get a random document from the collection"""
+    def random_doc(self, where: dict = None) -> str:
+        """
+        Get a random document from the collection.
+
+        Args:
+            where (dict, optional): A dictionary specifying the conditions for selecting the document. Defaults to None.
+
+        Returns:
+            Document: A Document object containing the information of the selected document.
+        """
         id_ = random.choice(self.ids)
         query_result = self.collection.get(
-            ids = [id_], 
-            include = ['documents','metadatas','embeddings'], 
-            where = where)
-        
-        return Document(id = query_result['ids'][0], 
-                        metadata = query_result['metadatas'][0],
-                        embedding = query_result['embeddings'][0],
-                        document = query_result['documents'][0])
+            ids=[id_],
+            include=['documents', 'metadatas', 'embeddings'],
+            where=where
+        )
+
+        return Document(
+            id=query_result['ids'][0],
+            metadata=query_result['metadatas'][0],
+            embedding=query_result['embeddings'][0],
+            document=query_result['documents'][0]
+        )
     
-    def random_docs(self, n:int = 10, where:dict = None) -> List[Document]:
-        """Get n random documents from the collection"""
+    def random_docs(self, n: int = 10, where: dict = None) -> List[Document]:
+        """
+        Get n random documents from the collection.
+
+        Args:
+            n (int, optional): The number of random documents to retrieve. Defaults to 10.
+            where (dict, optional): A dictionary specifying the conditions for document retrieval. Defaults to None.
+
+        Returns:
+            List[Document]: A list of randomly selected Document objects.
+
+        Raises:
+            None
+
+        Example:
+            >>> chroma_crud.random_docs(n=5, where={"category": "news"})
+            [Document(id='123', document={'title': 'News 1', 'content': 'Lorem ipsum...'}, metadata={'author': 'John Doe'}),
+             Document(id='456', document={'title': 'News 2', 'content': 'Lorem ipsum...'}, metadata={'author': 'Jane Smith'}),
+             Document(id='789', document={'title': 'News 3', 'content': 'Lorem ipsum...'}, metadata={'author': 'John Doe'}),
+             Document(id='012', document={'title': 'News 4', 'content': 'Lorem ipsum...'}, metadata={'author': 'Jane Smith'}),
+             Document(id='345', document={'title': 'News 5', 'content': 'Lorem ipsum...'}, metadata={'author': 'John Doe'})]
+        """
         n = min(n, len(self.ids))
         ids = random.sample(self.ids, n)
-        docs = self.collection.get(ids = ids, include = ['documents','metadatas'], where = where)
-        return  [Document(id = id_, document = docs['documents'][i], metadata = docs['metadatas'][i]) 
-                 for i, id_ in enumerate(ids)]
+        docs = self.collection.get(ids=ids, include=['documents', 'metadatas'], where=where)
+        return [Document(id=id_, document=docs['documents'][i], metadata=docs['metadatas'][i])
+                for i, id_ in enumerate(ids)]
+
     
     def query(self, query_text:str, n_results:int = 10 , where:dict = None) -> dict:
         """Query database with a query text string"""
@@ -92,7 +130,7 @@ class ChromaCrud:
         query_results = self.query(doc.document, n_results = n_results, where = where_query)
         return doc, query_results
     
-    def insert_dateframe(self, 
+    def insert_dataframe(self, 
                          df:pd.DataFrame, 
                          id_col:str = None, 
                          doc_col:str = "text", 
@@ -126,8 +164,12 @@ class ChromaCrud:
             metadatas = metadatas,
             ids = ids
         )
+        
+        
 
         params = {k:v for k,v in params.items() if v is not None}
+        
+        print(params)
         self.collection.add(**params)
         print("Successful added to collection")
         
@@ -177,3 +219,37 @@ class ChromaCrud:
         
     def delete_by_key(self, key_name):
         delete_metadata_by_key(key_name)
+        
+        
+    def get_documents(self, 
+                  ids:list = None, 
+                  where = None, 
+                  limit = None, 
+                  offset = None, 
+                  where_document = None, 
+                  include = None):
+    
+        if include is None:
+            include = ['metadatas','documents','embeddings']
+
+        rst = self.collection.get(
+            ids = ids, 
+            where = where,   
+            limit = limit, 
+            offset = offset, 
+            where_document = where_document, 
+            include = include
+        )
+        
+        rst = {k:v for k,v in rst.items() if v is not None}
+
+        docs = []
+        for i in range(len(rst['ids'])):
+            id = rst['ids'][i]
+            metadata = rst['metadatas'][i] if "metadatas" in rst else None
+            document = rst['documents'][i] if "documents" in rst else None
+            embedding = rst['embeddings'][i] if "embeddings" in rst else None
+            doc = Document(id = id, metadata = metadata, document = document, embedding = embedding)
+            docs.append(doc)
+            
+        return docs

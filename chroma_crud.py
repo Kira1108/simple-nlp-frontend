@@ -6,15 +6,19 @@ import datetime
 import uuid
 import numpy as np
 import sqlite3
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from chromadb import Collection
 
 
-def delete_metadata_by_key(key_name:str):
+def delete_metadata_by_key(key_name:str, storage_path:str):
+    
+    storage_path = Path(storage_path)
+    sqlite_path = storage_path / "chroma.sqlite3"
 
-    with sqlite3.connect("/Users/wanghuan/Projects/chroma_crud/chroma_storage/chroma.sqlite3") as conn:
+    with sqlite3.connect(sqlite_path) as conn:
         cursor = conn.cursor()
         cursor.execute(f"delete from embedding_metadata where key ='{key_name}';")
         conn.commit()
@@ -227,7 +231,9 @@ class ChromaCrud:
         print("Update metdata successfully.")    
         
     def delete_by_key(self, key_name):
-        delete_metadata_by_key(key_name)
+        if self.storage_path is None:
+            raise ValueError("Provide storage_path to delete metadata by key")
+        delete_metadata_by_key(key_name, self.storage_path)
         
         
     def get_documents(self, 

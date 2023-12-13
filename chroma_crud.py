@@ -1,5 +1,4 @@
 import random
-from chromadb import Collection
 from dataclasses import dataclass
 from typing import List, Tuple, Dict
 import pandas as pd
@@ -7,6 +6,11 @@ import datetime
 import uuid
 import numpy as np
 import sqlite3
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chromadb import Collection
+
 
 def delete_metadata_by_key(key_name:str):
 
@@ -14,7 +18,6 @@ def delete_metadata_by_key(key_name:str):
         cursor = conn.cursor()
         cursor.execute(f"delete from embedding_metadata where key ='{key_name}';")
         conn.commit()
-
 
 @dataclass
 class Document:
@@ -38,7 +41,8 @@ class QueryResult(Document):
 @dataclass
 class ChromaCrud:
     
-    collection:Collection
+    collection:"Collection"
+    storage_path:str = None
     
     def __post_init__(self):
         self._ids = None
@@ -127,6 +131,11 @@ class ChromaCrud:
     def recommend(self, n_results:int = 10, where:dict = None, where_query:dict = None) -> Tuple[Document, List[QueryResult]]:
         """Randomly select a document and query the database for n_results similar documents"""
         doc = self.random_doc(where = where)
+        query_results = self.query(doc.document, n_results = n_results, where = where_query)
+        return doc, query_results
+    
+    def recommend_by_text(self, text:str, n_results:int = 10, where_query:dict = None) -> Tuple[Document, List[QueryResult]]:
+        doc = Document(id = "", document = text)
         query_results = self.query(doc.document, n_results = n_results, where = where_query)
         return doc, query_results
     
@@ -253,3 +262,39 @@ class ChromaCrud:
             docs.append(doc)
             
         return docs
+    
+    
+    def mean_seed_query(self, ids, n_results:int = 10):
+        embeddings = self.collection.get(ids = ids, include = ['embeddings'])['embeddings']
+        mean_vector = np.array(embeddings).mean(axis = 0)
+        results = self.collection.query(
+            query_embeddings = [mean_vector.tolist()], 
+            n_results = n_results)
+        return results
+        
+        
+        
+    
+def mean_seed_query(collection, ids, n:int = 10):
+
+   embeddings = collection.get(ids = ids, include = ['embeddings'])['embeddings']
+
+   mean_vector = np.array(embeddings).mean(axis = 0)
+
+   results = collection.query(
+      query_embeddings = [mean_vector.tolist()], 
+      n_results = n)
+   
+   return results
+
+def concat_text_query(collection, ids, n:int = 10):
+    
+   documents = collection.get(ids = ids, include = ['documents'])['documents']
+
+   query_text = " ".join(documents)
+
+   results = collection.query(
+         query_texts = [query_text], 
+         n_results = n)
+   
+   return results

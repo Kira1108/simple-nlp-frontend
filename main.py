@@ -1,8 +1,7 @@
 import chromadb
-from chroma_crud import ChromaCrud
-import streamlit as st
+from nlp_toolkit.vectordbs import ChromaCrud
 from nlp_toolkit.embedders import SentenceEmbedder
-import os
+import streamlit as st
 import pandas as pd
 from utils import get_options
 from sidebar import create_side_bar
@@ -16,12 +15,13 @@ if not "recommends" in st.session_state:
 
 @st.cache_resource()
 def get_db():
-    client = chromadb.PersistentClient(path="./chroma_storage")
+    storage = "./chroma_storage"
+    client = chromadb.PersistentClient(path=storage)
     collection = client.get_or_create_collection(
         name="app", 
         embedding_function=SentenceEmbedder().make_chroma(),
         metadata={"hnsw:space": "cosine"})
-    return ChromaCrud(collection)
+    return ChromaCrud(collection, storage)
 
 def get_data(n_results):
     db = get_db()

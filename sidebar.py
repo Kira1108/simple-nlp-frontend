@@ -5,9 +5,6 @@ from utils import (
     save_labelset)
 from io import StringIO
 
-
-st.set_page_config(layout="wide",page_title="Similarity Annotation Tool")
-
 def create_side_bar(db):
     with st.sidebar:
         st.markdown("# Document Query Options")
@@ -16,6 +13,10 @@ def create_side_bar(db):
         st.markdown("**Select Label Set**")
         label_set = st.selectbox("Label Set", get_labelset_names(), key = "use_label_set")
         
+        # select which metadatafield to annotate
+        st.markdown("Choose which metadata field to annotate on")
+        annot_field = st.selectbox("Annotation Field", list(db.random_doc().metadata.keys()), key = "meta_field_annot")
+
         st.markdown("**Create Label Set**")
         col1, col2 = st.columns(2)
         with col1:
@@ -52,4 +53,4 @@ def create_side_bar(db):
             db.delete_by_key(del_key)
             st.success(f"Deleted metadata `{del_key}`")
              
-    return n_results, label_set
+    return n_results, label_set, annot_field

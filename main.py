@@ -6,6 +6,8 @@ import pandas as pd
 from utils import get_options
 from sidebar import create_side_bar
 
+st.set_page_config(layout="wide",page_title="Similarity Annotation Tool")
+
 if not "current_id" in st.session_state:    
     st.session_state.current_id = 0
 if not "doc" in st.session_state:
@@ -32,7 +34,7 @@ st.markdown("----")
 
 db = get_db()
 
-n_results, label_set = create_side_bar(db)
+n_results, label_set, annot_field = create_side_bar(db)
         
 if st.session_state.doc is None:
     doc, recommends = get_data(n_results)
@@ -71,7 +73,10 @@ with col2:
     st.markdown(cur_doc.document)
     
     for option in get_options(label_set):
-        st.button(option, key=option, use_container_width=True)
+        btn = st.button(option, key=option, use_container_width=True)
+        if btn:
+            db.update_metafield(ids = [cur_doc.id],**{annot_field:option})
+            st.success(f"Updated metadata `{annot_field}` with value `{option}`")
         
 
     

@@ -28,6 +28,10 @@ def get_db():
 def get_data(n_results):
     db = get_db()
     return db.recommend(n_results = n_results)
+
+def get_recommends(doc, *args, **kwargs):
+    db = get_db()
+    return db.recommend_by_doc(doc, *args, **kwargs)
     
 st.markdown("# Similarity Annotation Tool")
 st.markdown("----")
@@ -48,7 +52,7 @@ with col1:
         st.session_state.doc = doc
         st.session_state.recommends = recommends
         st.session_state.current_id = 0
-    st.markdown("### Query Document")
+    st.markdown("#### Query Document")
     st.data_editor(pd.DataFrame(
         [{"name":k,"value":v} for k,v in st.session_state.doc.metadata.items()]
         +[{"name":"distance","value":"---"}]
@@ -56,15 +60,21 @@ with col1:
     st.markdown(st.session_state.doc.document)
     
 with col2:
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
     with col2:
-        if st.button("Next Similar Doc", use_container_width=True, key = 'next_doc'):
+        if st.button("Next", use_container_width=True, key = 'next_doc'):
             st.session_state.current_id += 1
     with col1:
-        if st.button("Previous Similar Doc", use_container_width=True, key = 'pervious_doc'):
+        if st.button("Previous", use_container_width=True, key = 'pervious_doc'):
             st.session_state.current_id -= 1
-    
-    st.markdown("### Recommend Document")
+    with col3:
+        if st.button("Refresh", use_container_width=True, key = 'refresh_recommends'):
+            recommends = get_recommends(st.session_state.doc, n_results = n_results)
+            st.session_state.recommends = recommends
+
+    loc = st.session_state.current_id + 1 if st.session_state.current_id >=0 else len(st.session_state.recommends) + st.session_state.current_id + 1
+    st.markdown("#### Recommend Document" + f" [{loc}/{len(st.session_state.recommends)}]")
+
     cur_doc = st.session_state.recommends[st.session_state.current_id]
     st.data_editor(pd.DataFrame(
         [{"name":k,"value":v} for k,v in cur_doc.metadata.items()] +
@@ -77,6 +87,8 @@ with col2:
         if btn:
             db.update_metafield(ids = [cur_doc.id],**{annot_field:option})
             st.success(f"Updated metadata `{annot_field}` with value `{option}`")
+            recommends = get_recommends(st.session_state.doc, n_results = n_results)
+            st.session_state.recommends = recommends
         
 
     
